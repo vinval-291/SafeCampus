@@ -74,12 +74,8 @@ const PropertyDetailsPage = () => {
     fetchProperty();
   }, [id, isLoggedIn]);
 
-  const handleLogin = async () => {
-    try {
-      await signInWithPopup(auth, googleProvider);
-    } catch (error) {
-      console.error('Login error:', error);
-    }
+  const handleLogin = () => {
+    navigate('/auth');
   };
 
   const handleWhatsappClick = async () => {

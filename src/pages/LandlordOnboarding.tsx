@@ -32,8 +32,11 @@ const LandlordOnboarding = ({ profile }: Props) => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (profile?.role === 'landlord') {
+    if (profile?.role === 'landlord' && profile?.verificationStatus === 'approved') {
       navigate('/landlord-dashboard');
+    }
+    if (profile?.verificationStatus === 'pending') {
+      setStep(5); // Show success/pending screen
     }
   }, [profile, navigate]);
 
@@ -44,7 +47,8 @@ const LandlordOnboarding = ({ profile }: Props) => {
     propertyType: 'apartment',
     rent: '',
     rooms: '1',
-    campus: 'City Center'
+    campus: 'City Center',
+    ownershipProofType: 'title_deed'
   });
 
   const handleNext = () => setStep(s => s + 1);
@@ -69,7 +73,7 @@ const LandlordOnboarding = ({ profile }: Props) => {
         phoneNumber: formData.phoneNumber
       });
 
-      setStep(5); // Success step
+      setStep(6); // Success step
     } catch (error) {
       console.error('Onboarding error:', error);
     } finally {
@@ -91,7 +95,7 @@ const LandlordOnboarding = ({ profile }: Props) => {
       {/* Progress Bar */}
       <div className="mb-12">
         <div className="flex justify-between mb-4">
-          {[1, 2, 3, 4].map((i) => (
+          {[1, 2, 3, 4, 5].map((i) => (
             <div 
               key={i} 
               className={cn(
@@ -107,7 +111,7 @@ const LandlordOnboarding = ({ profile }: Props) => {
           <motion.div 
             className="h-full bg-blue-600"
             initial={{ width: 0 }}
-            animate={{ width: `${(step - 1) * 33.33}%` }}
+            animate={{ width: `${(step - 1) * 25}%` }}
           />
         </div>
       </div>
@@ -198,6 +202,35 @@ const LandlordOnboarding = ({ profile }: Props) => {
             <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mb-8">
               <FileText className="w-8 h-8 text-blue-600" />
             </div>
+            <h2 className="text-3xl font-bold text-slate-900 mb-4">Ownership Proof</h2>
+            <p className="text-slate-500 mb-10">Upload documents proving you own the property you intend to list.</p>
+            
+            <div className="space-y-8">
+              <div className="p-6 border-2 border-dashed border-slate-200 rounded-3xl text-center hover:border-blue-400 transition-colors cursor-pointer group">
+                <Upload className="w-10 h-10 text-slate-300 mx-auto mb-4 group-hover:text-blue-500 transition-colors" />
+                <h4 className="font-bold text-slate-900 mb-1">Upload Ownership Document</h4>
+                <p className="text-slate-400 text-sm">Title Deed, Utility Bill, or Tax Receipt</p>
+              </div>
+            </div>
+
+            <div className="mt-12 flex gap-4">
+              <button onClick={handleBack} className="flex-1 py-4 border-2 border-slate-200 text-slate-600 rounded-2xl font-bold hover:bg-slate-50 transition-all">Back</button>
+              <button onClick={handleNext} className="flex-[2] py-4 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition-all">Continue</button>
+            </div>
+          </motion.div>
+        )}
+
+        {step === 4 && (
+          <motion.div 
+            key="step4"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="bg-white p-10 rounded-[2.5rem] shadow-xl border border-slate-100"
+          >
+            <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mb-8">
+              <FileText className="w-8 h-8 text-blue-600" />
+            </div>
             <h2 className="text-3xl font-bold text-slate-900 mb-4">Property Details</h2>
             <p className="text-slate-500 mb-10">Tell us about the property you want to list.</p>
             
@@ -244,9 +277,9 @@ const LandlordOnboarding = ({ profile }: Props) => {
           </motion.div>
         )}
 
-        {step === 4 && (
+        {step === 5 && (
           <motion.div 
-            key="step4"
+            key="step5"
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
@@ -286,9 +319,9 @@ const LandlordOnboarding = ({ profile }: Props) => {
           </motion.div>
         )}
 
-        {step === 5 && (
+        {step === 6 && (
           <motion.div 
-            key="step5"
+            key="step6"
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             className="bg-white p-12 rounded-[3rem] shadow-xl border border-slate-100 text-center"

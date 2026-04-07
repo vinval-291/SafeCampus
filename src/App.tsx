@@ -50,6 +50,7 @@ import AboutPage from './pages/AboutPage';
 import FAQPage from './pages/FAQPage';
 import ContactPage from './pages/ContactPage';
 import LegalPage from './pages/LegalPage';
+import AuthPage from './pages/AuthPage';
 
 // Theme Context
 const ThemeContext = React.createContext({ isDark: false, toggle: () => {} });
@@ -169,12 +170,12 @@ export default function App() {
                   </button>
 
                   {!user ? (
-                    <button 
-                      onClick={handleLogin}
+                    <Link 
+                      to="/auth"
                       className="bg-blue-600 text-white px-5 py-2 rounded-full text-sm font-semibold hover:bg-blue-700 transition-all shadow-sm active:scale-95"
                     >
                       Login / Sign Up
-                    </button>
+                    </Link>
                   ) : (
                     <div className="flex items-center gap-4">
                       <Link to="/profile" className="flex items-center gap-2 group">
@@ -256,12 +257,13 @@ export default function App() {
                     )}
                     <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
                       {!user ? (
-                        <button 
-                          onClick={() => { handleLogin(); setIsMenuOpen(false); }}
-                          className="w-full bg-blue-600 text-white px-4 py-3 rounded-xl text-base font-semibold hover:bg-blue-700 transition-all"
+                        <Link 
+                          to="/auth" 
+                          onClick={() => setIsMenuOpen(false)}
+                          className="block w-full bg-blue-600 text-white px-4 py-3 rounded-xl text-base font-semibold text-center hover:bg-blue-700 transition-all"
                         >
                           Login / Sign Up
-                        </button>
+                        </Link>
                       ) : (
                         <div className="space-y-2">
                           <Link 
@@ -297,6 +299,7 @@ export default function App() {
               <Route path="/landlord-dashboard" element={<LandlordDashboard profile={profile} />} />
               <Route path="/admin" element={<AdminDashboardPage profile={profile} />} />
               <Route path="/profile" element={<ProfilePage profile={profile} user={user} />} />
+              <Route path="/auth" element={<AuthPage />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/faq" element={<FAQPage />} />
               <Route path="/contact" element={<ContactPage />} />
