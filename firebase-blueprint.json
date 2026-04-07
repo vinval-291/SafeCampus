@@ -1,0 +1,78 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile for students, landlords, and admins.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string", "enum": ["student", "landlord", "admin"] },
+        "isVerified": { "type": "boolean", "description": "Verification status for landlords" },
+        "verificationStatus": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "phoneNumber": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Property": {
+      "title": "Property",
+      "description": "Student accommodation listing.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "landlordId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "address": { "type": "string" },
+        "campus": { "type": "string" },
+        "price": { "type": "number" },
+        "type": { "type": "string", "enum": ["apartment", "studio", "room", "house"] },
+        "rooms": { "type": "number" },
+        "amenities": { "type": "array", "items": { "type": "string" } },
+        "images": { "type": "array", "items": { "type": "string" } },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected", "archived"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["landlordId", "title", "price", "status"]
+    },
+    "Booking": {
+      "title": "Booking",
+      "description": "Booking request from a student to a landlord.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "studentId": { "type": "string" },
+        "landlordId": { "type": "string" },
+        "propertyId": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "accepted", "declined", "cancelled"] },
+        "moveInDate": { "type": "string", "format": "date" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["studentId", "landlordId", "propertyId", "status"]
+    },
+    "Verification": {
+      "title": "Verification",
+      "description": "Landlord identity and property ownership verification documents.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "landlordId": { "type": "string" },
+        "idUrl": { "type": "string" },
+        "selfieUrl": { "type": "string" },
+        "ownershipDocUrl": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["landlordId", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": { "schema": "User", "description": "User profiles" },
+    "/properties/{propertyId}": { "schema": "Property", "description": "Property listings" },
+    "/bookings/{bookingId}": { "schema": "Booking", "description": "Booking requests" },
+    "/verifications/{verificationId}": { "schema": "Verification", "description": "Verification requests" }
+  }
+}

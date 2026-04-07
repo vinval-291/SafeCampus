@@ -1,0 +1,8 @@
+{
+  "name": "SafeCampus",
+  "description": "A verified student accommodation platform connecting students directly with landlords with a focus on trust and fraud prevention.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ]
+}
