@@ -17,7 +17,8 @@ import {
   ArrowRight, 
   ArrowLeft,
   Upload,
-  AlertCircle
+  AlertCircle,
+  Trash2
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
@@ -30,6 +31,109 @@ const LandlordOnboarding = ({ profile }: Props) => {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+
+  // File states (supporting real file selection)
+  const [idFile, setIdFile] = useState<File | null>(null);
+  const [selfieFile, setSelfieFile] = useState<File | null>(null);
+  const [ownershipFile, setOwnershipFile] = useState<File | null>(null);
+
+  // Drag states
+  const [idDragActive, setIdDragActive] = useState(false);
+  const [selfieDragActive, setSelfieDragActive] = useState(false);
+  const [ownershipDragActive, setOwnershipDragActive] = useState(false);
+
+  // Input refs
+  const idInputRef = React.useRef<HTMLInputElement>(null);
+  const selfieInputRef = React.useRef<HTMLInputElement>(null);
+  const ownershipInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Image previews
+  const [idPreview, setIdPreview] = useState<string | null>(null);
+  const [selfiePreview, setSelfiePreview] = useState<string | null>(null);
+  const [ownershipPreview, setOwnershipPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (idFile && idFile.type.startsWith('image/')) {
+      const url = URL.createObjectURL(idFile);
+      setIdPreview(url);
+      return () => URL.revokeObjectURL(url);
+    } else {
+      setIdPreview(null);
+    }
+  }, [idFile]);
+
+  useEffect(() => {
+    if (selfieFile && selfieFile.type.startsWith('image/')) {
+      const url = URL.createObjectURL(selfieFile);
+      setSelfiePreview(url);
+      return () => URL.revokeObjectURL(url);
+    } else {
+      setSelfiePreview(null);
+    }
+  }, [selfieFile]);
+
+  useEffect(() => {
+    if (ownershipFile && ownershipFile.type.startsWith('image/')) {
+      const url = URL.createObjectURL(ownershipFile);
+      setOwnershipPreview(url);
+      return () => URL.revokeObjectURL(url);
+    } else {
+      setOwnershipPreview(null);
+    }
+  }, [ownershipFile]);
+
+  // Drag handlers
+  const handleDrag = (e: React.DragEvent, setDragActive: React.Dispatch<React.SetStateAction<boolean>>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave" || e.type === "dragend") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (
+    e: React.DragEvent, 
+    setFile: React.Dispatch<React.SetStateAction<File | null>>, 
+    setDragActive: React.Dispatch<React.SetStateAction<boolean>>
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      setFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleFileChange = (
+    e: React.ChangeEvent<HTMLInputElement>, 
+    setFile: React.Dispatch<React.SetStateAction<File | null>>
+  ) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+    }
+  };
+
+  const handleClearFile = (
+    e: React.MouseEvent,
+    setFile: React.Dispatch<React.SetStateAction<File | null>>,
+    inputRef: React.RefObject<HTMLInputElement | null>
+  ) => {
+    e.stopPropagation();
+    setFile(null);
+    if (inputRef.current) {
+      inputRef.current.value = '';
+    }
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  };
 
   useEffect(() => {
     if (profile?.role === 'landlord' && profile?.verificationStatus === 'approved') {
@@ -67,6 +171,12 @@ const LandlordOnboarding = ({ profile }: Props) => {
         landlordId: profile.uid,
         status: 'pending',
         createdAt: serverTimestamp(),
+        idFileName: idFile ? idFile.name : null,
+        idFileSize: idFile ? idFile.size : null,
+        selfieFileName: selfieFile ? selfieFile.name : null,
+        selfieFileSize: selfieFile ? selfieFile.size : null,
+        ownershipFileName: ownershipFile ? ownershipFile.name : null,
+        ownershipFileSize: ownershipFile ? ownershipFile.size : null,
         ...formData
       });
 
@@ -78,7 +188,7 @@ const LandlordOnboarding = ({ profile }: Props) => {
         businessName: formData.businessName
       });
 
-      setStep(7); // Success step (updated because we added a step)
+      setStep(7); // Success step
     } catch (error) {
       console.error('Onboarding error:', error);
     } finally {
@@ -196,17 +306,118 @@ const LandlordOnboarding = ({ profile }: Props) => {
                   onChange={(e) => setFormData({...formData, idNumber: e.target.value})}
                 />
               </div>
+
+              {/* Hidden file inputs */}
+              <input 
+                type="file" 
+                ref={idInputRef} 
+                onChange={(e) => handleFileChange(e, setIdFile)} 
+                className="hidden" 
+                accept="image/*,application/pdf" 
+              />
+              <input 
+                type="file" 
+                ref={selfieInputRef} 
+                onChange={(e) => handleFileChange(e, setSelfieFile)} 
+                className="hidden" 
+                accept="image/*" 
+              />
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="p-6 border-2 border-dashed border-slate-200 rounded-3xl text-center hover:border-blue-400 transition-colors cursor-pointer group">
-                  <Upload className="w-10 h-10 text-slate-300 mx-auto mb-4 group-hover:text-blue-500 transition-colors" />
-                  <h4 className="font-bold text-slate-900 mb-1">Upload ID</h4>
-                  <p className="text-slate-400 text-xs text-center border-none shadow-none">Passport or License</p>
+                {/* ID Card Box */}
+                <div 
+                  onClick={() => idInputRef.current?.click()}
+                  onDragEnter={(e) => handleDrag(e, setIdDragActive)}
+                  onDragOver={(e) => handleDrag(e, setIdDragActive)}
+                  onDragLeave={(e) => handleDrag(e, setIdDragActive)}
+                  onDrop={(e) => handleDrop(e, setIdFile, setIdDragActive)}
+                  className={cn(
+                    "p-6 border-2 border-dashed rounded-3xl text-center transition-all cursor-pointer group relative overflow-hidden flex flex-col justify-center min-h-[170px]",
+                    idDragActive ? "border-blue-500 bg-blue-50/55 scale-[0.98]" : "border-slate-200 hover:border-blue-400 bg-slate-50/30 hover:bg-slate-50/70"
+                  )}
+                >
+                  {idFile ? (
+                    <div className="h-full flex flex-col items-center justify-between">
+                      {idPreview ? (
+                        <div className="w-16 h-12 rounded-lg overflow-hidden border border-slate-200 mb-2">
+                          <img src={idPreview} alt="ID Preview" className="w-full h-full object-cover" />
+                        </div>
+                      ) : (
+                        <FileText className="w-10 h-10 text-blue-500 mb-2 animate-pulse" />
+                      )}
+                      <div>
+                        <p className="text-slate-900 font-bold text-sm truncate max-w-[180px]">{idFile.name}</p>
+                        <p className="text-slate-400 text-xs">{formatFileSize(idFile.size)}</p>
+                      </div>
+                      <div className="flex gap-2 mt-4 items-center justify-center">
+                        <span className="text-xs bg-green-100 text-green-700 px-2.5 py-1 rounded-full font-black uppercase tracking-wider flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5 fill-current text-green-600" /> Selected
+                        </span>
+                        <button 
+                          onClick={(e) => handleClearFile(e, setIdFile, idInputRef)}
+                          className="p-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors"
+                          title="Remove file"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <Upload className="w-10 h-10 text-slate-300 mx-auto mb-4 group-hover:text-blue-500 transition-colors" />
+                      <h4 className="font-bold text-slate-900 mb-1">Upload ID</h4>
+                      <p className="text-slate-400 text-xs text-center border-none shadow-none">Drag & drop or Click to browse</p>
+                      <p className="text-slate-300 text-[10px] mt-1">Accepts images or PDFs</p>
+                    </>
+                  )}
                 </div>
 
-                <div className="p-6 border-2 border-dashed border-slate-200 rounded-3xl text-center hover:border-blue-400 transition-colors cursor-pointer group">
-                  <Camera className="w-10 h-10 text-slate-300 mx-auto mb-4 group-hover:text-blue-500 transition-colors" />
-                  <h4 className="font-bold text-slate-900 mb-1">Take Selfie</h4>
-                  <p className="text-slate-400 text-xs text-center border-none shadow-none">Live verification</p>
+                {/* Selfie Box */}
+                <div 
+                  onClick={() => selfieInputRef.current?.click()}
+                  onDragEnter={(e) => handleDrag(e, setSelfieDragActive)}
+                  onDragOver={(e) => handleDrag(e, setSelfieDragActive)}
+                  onDragLeave={(e) => handleDrag(e, setSelfieDragActive)}
+                  onDrop={(e) => handleDrop(e, setSelfieFile, setSelfieDragActive)}
+                  className={cn(
+                    "p-6 border-2 border-dashed rounded-3xl text-center transition-all cursor-pointer group relative overflow-hidden flex flex-col justify-center min-h-[170px]",
+                    selfieDragActive ? "border-blue-500 bg-blue-50/55 scale-[0.98]" : "border-slate-200 hover:border-blue-400 bg-slate-50/30 hover:bg-slate-50/70"
+                  )}
+                >
+                  {selfieFile ? (
+                    <div className="h-full flex flex-col items-center justify-between">
+                      {selfiePreview ? (
+                        <div className="w-14 h-14 rounded-full overflow-hidden border border-slate-200 mb-2">
+                          <img src={selfiePreview} alt="Selfie Preview" className="w-full h-full object-cover" />
+                        </div>
+                      ) : (
+                        <Camera className="w-10 h-10 text-blue-500 mb-2 animate-pulse" />
+                      )}
+                      <div>
+                        <p className="text-slate-900 font-bold text-sm truncate max-w-[180px]">{selfieFile.name}</p>
+                        <p className="text-slate-400 text-xs">{formatFileSize(selfieFile.size)}</p>
+                      </div>
+                      <div className="flex gap-2 mt-4 items-center justify-center">
+                        <span className="text-xs bg-green-100 text-green-700 px-2.5 py-1 rounded-full font-black uppercase tracking-wider flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5 fill-current text-green-600" /> Captured
+                        </span>
+                        <button 
+                          onClick={(e) => handleClearFile(e, setSelfieFile, selfieInputRef)}
+                          className="p-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors"
+                          title="Remove file"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <Camera className="w-10 h-10 text-slate-300 mx-auto mb-4 group-hover:text-blue-500 transition-colors" />
+                      <h4 className="font-bold text-slate-900 mb-1">Take Selfie</h4>
+                      <p className="text-slate-400 text-xs text-center border-none shadow-none">Upload or snap a headshot</p>
+                      <p className="text-slate-300 text-[10px] mt-1">Live portrait verify</p>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -215,8 +426,8 @@ const LandlordOnboarding = ({ profile }: Props) => {
               <button onClick={handleBack} className="flex-1 py-4 border-2 border-slate-200 text-slate-600 rounded-2xl font-bold hover:bg-slate-50 transition-all">Back</button>
               <button 
                 onClick={handleNext} 
-                disabled={!formData.idNumber}
-                className="flex-[2] py-4 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition-all disabled:opacity-50"
+                disabled={!formData.idNumber || !idFile || !selfieFile}
+                className="flex-[2] py-4 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 Continue
               </button>
@@ -249,10 +460,61 @@ const LandlordOnboarding = ({ profile }: Props) => {
                   onChange={(e) => setFormData({...formData, registrationNumber: e.target.value})}
                 />
               </div>
-              <div className="p-8 border-2 border-dashed border-slate-200 rounded-3xl text-center hover:border-blue-400 transition-colors cursor-pointer group">
-                <Upload className="w-10 h-10 text-slate-300 mx-auto mb-4 group-hover:text-blue-500 transition-colors" />
-                <h4 className="font-bold text-slate-900 mb-1">Upload Ownership Document</h4>
-                <p className="text-slate-400 text-sm border-none shadow-none">Title Deed, Utility Bill, or Tax Receipt</p>
+
+              {/* Hidden file input */}
+              <input 
+                type="file" 
+                ref={ownershipInputRef} 
+                onChange={(e) => handleFileChange(e, setOwnershipFile)} 
+                className="hidden" 
+                accept="image/*,application/pdf" 
+              />
+
+              <div 
+                onClick={() => ownershipInputRef.current?.click()}
+                onDragEnter={(e) => handleDrag(e, setOwnershipDragActive)}
+                onDragOver={(e) => handleDrag(e, setOwnershipDragActive)}
+                onDragLeave={(e) => handleDrag(e, setOwnershipDragActive)}
+                onDrop={(e) => handleDrop(e, setOwnershipFile, setOwnershipDragActive)}
+                className={cn(
+                  "p-8 border-2 border-dashed rounded-3xl text-center transition-all cursor-pointer group relative overflow-hidden flex flex-col justify-center min-h-[170px]",
+                  ownershipDragActive ? "border-blue-500 bg-blue-50/55 scale-[0.98]" : "border-slate-200 hover:border-blue-400 bg-slate-50/30 hover:bg-slate-50/70"
+                )}
+              >
+                {ownershipFile ? (
+                  <div className="h-full flex flex-col items-center justify-between">
+                    {ownershipPreview ? (
+                      <div className="w-20 h-14 rounded-lg overflow-hidden border border-slate-200 mb-2">
+                        <img src={ownershipPreview} alt="Ownership Preview" className="w-full h-full object-cover" />
+                      </div>
+                    ) : (
+                      <FileText className="w-12 h-12 text-blue-500 mb-2" />
+                    )}
+                    <div>
+                      <p className="text-slate-900 font-bold text-sm truncate max-w-[280px]">{ownershipFile.name}</p>
+                      <p className="text-slate-400 text-xs">{formatFileSize(ownershipFile.size)}</p>
+                    </div>
+                    <div className="flex gap-2 mt-4 items-center justify-center">
+                      <span className="text-xs bg-green-100 text-green-700 px-2.5 py-1 rounded-full font-black uppercase tracking-wider flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5 fill-current text-green-600" /> Document Loaded
+                      </span>
+                      <button 
+                        onClick={(e) => handleClearFile(e, setOwnershipFile, ownershipInputRef)}
+                        className="p-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors"
+                        title="Remove file"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <Upload className="w-10 h-10 text-slate-300 mx-auto mb-4 group-hover:text-blue-500 transition-colors" />
+                    <h4 className="font-bold text-slate-900 mb-1">Upload Ownership Document</h4>
+                    <p className="text-slate-400 text-sm border-none shadow-none">Drag & drop or Click to select</p>
+                    <p className="text-slate-300 text-xs mt-1">Title Deed, Utility Bill, or Tax Receipt (PDF/Images)</p>
+                  </>
+                )}
               </div>
             </div>
 
@@ -260,7 +522,8 @@ const LandlordOnboarding = ({ profile }: Props) => {
               <button onClick={handleBack} className="flex-1 py-4 border-2 border-slate-200 text-slate-600 rounded-2xl font-bold hover:bg-slate-50 transition-all">Back</button>
               <button 
                 onClick={handleNext} 
-                className="flex-[2] py-4 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition-all"
+                disabled={!formData.registrationNumber || !ownershipFile}
+                className="flex-[2] py-4 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 Continue
               </button>
