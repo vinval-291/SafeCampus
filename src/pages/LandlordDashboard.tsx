@@ -4,7 +4,9 @@ import {
   query, 
   where, 
   onSnapshot,
-  orderBy
+  orderBy,
+  doc,
+  updateDoc
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Property, UserProfile, Booking } from '../types';
@@ -66,6 +68,14 @@ const LandlordDashboard = ({ profile }: Props) => {
     setLoading(false);
     return () => { unsubProps(); unsubBookings(); };
   }, [profile]);
+
+  const handleUpdateBookingStatus = async (bookingId: string, status: string) => {
+    try {
+      await updateDoc(doc(db, 'bookings', bookingId), { status });
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   if (!profile || profile.role !== 'landlord') {
     return <div className="p-24 text-center font-bold text-red-500">Access Denied</div>;
@@ -212,17 +222,47 @@ const LandlordDashboard = ({ profile }: Props) => {
               Recent Requests
             </h3>
             <div className="space-y-6">
-              {bookings.slice(0, 5).map(booking => (
-                <div key={booking.id} className="flex items-start gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                  <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-blue-600 shadow-sm">
-                    <Clock className="w-5 h-5" />
+              {bookings.slice(0, 10).map(booking => (
+                <div key={booking.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                  <div className="flex items-start gap-4 mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-blue-600 shadow-sm shrink-0">
+                      <Clock className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-slate-900 truncate">Booking Request</p>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
+                        {new Date(booking.createdAt?.toDate()).toLocaleDateString()}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-bold text-slate-900">New Booking Request</p>
-                    <p className="text-xs text-slate-500 mt-1">Status: <span className="capitalize">{booking.status}</span></p>
-                    <Link to="/profile" className="text-[10px] font-black text-blue-600 uppercase tracking-widest mt-2 block hover:underline">
-                      Manage Request
-                    </Link>
+                  
+                  <div className="flex items-center justify-between">
+                    <span className={cn(
+                      "px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest",
+                      booking.status === 'pending' ? "bg-amber-100 text-amber-700" :
+                      booking.status === 'accepted' ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                    )}>
+                      {booking.status}
+                    </span>
+                    
+                    {booking.status === 'pending' && (
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => handleUpdateBookingStatus(booking.id, 'accepted')}
+                          className="p-2 transition-all hover:bg-green-100 text-green-600 rounded-lg bg-white shadow-sm border border-slate-100"
+                          title="Accept Request"
+                        >
+                          <CheckCircle2 className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => handleUpdateBookingStatus(booking.id, 'declined')}
+                          className="p-2 transition-all hover:bg-red-100 text-red-600 rounded-lg bg-white shadow-sm border border-slate-100"
+                          title="Decline Request"
+                        >
+                          <XCircle className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}

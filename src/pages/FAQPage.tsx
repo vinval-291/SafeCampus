@@ -15,12 +15,16 @@ const FAQPage = () => {
       a: "Yes! Students can browse, search, and send booking requests for free. We don't charge students any platform fees."
     },
     {
-      q: "What should I do if a property doesn't match the listing?",
-      a: "SafeCampus takes fraud seriously. If you find a property that doesn't match its description, please report it immediately via the 'Report Listing' button. We'll investigate and take appropriate action."
+      q: "How much does it cost to list a property?",
+      a: "Listing is $29 per property per month. This covers verification and priority lead generation. Your first 14 days for your first property are free!"
     },
     {
-      q: "How do I list my property as a landlord?",
-      a: "Simply create an account, click 'List Your Property', and follow the onboarding steps. Once your identity and property are verified, your listing will go live."
+      q: "What should I do if a property doesn't match the listing?",
+      a: "SafeCampus takes fraud seriously. If you find a property that doesn't match its description, please report it immediately. We'll investigate and take appropriate action."
+    },
+    {
+      q: "How do I handle student inquiries?",
+      a: "Students can send you direct messages via your preferred contact method (typically WhatsApp). You can track all lead engagement from your landlord dashboard."
     },
     {
       q: "Can I book a viewing before paying?",

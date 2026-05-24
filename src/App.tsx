@@ -51,6 +51,11 @@ import FAQPage from './pages/FAQPage';
 import ContactPage from './pages/ContactPage';
 import LegalPage from './pages/LegalPage';
 import AuthPage from './pages/AuthPage';
+import HowItWorks from './pages/HowItWorks';
+import SafetyTips from './pages/SafetyTips';
+import Pricing from './pages/Pricing';
+import LandlordGuide from './pages/LandlordGuide';
+import ChatPage from './pages/ChatPage';
 
 // Theme Context
 const ThemeContext = React.createContext({ isDark: false, toggle: () => {} });
@@ -100,7 +105,10 @@ export default function App() {
   const handleLogin = async () => {
     try {
       await signInWithPopup(auth, googleProvider);
-    } catch (error) {
+    } catch (error: any) {
+      if (error.code === 'auth/popup-closed-by-user') {
+        return;
+      }
       console.error('Login error:', error);
     }
   };
@@ -154,13 +162,27 @@ export default function App() {
 
                 {/* Desktop Nav */}
                 <div className="hidden md:flex items-center gap-8">
-                  <Link to="/search" className="text-sm font-medium hover:text-blue-600 transition-colors">Find Housing</Link>
-                  {profile?.role === 'landlord' && (
-                    <Link to="/landlord-dashboard" className="text-sm font-medium hover:text-blue-600 transition-colors">Dashboard</Link>
+                  {profile?.role === 'landlord' ? (
+                    <>
+                      <Link to="/landlord-dashboard" className="text-sm font-medium hover:text-blue-600 transition-colors">Dashboard</Link>
+                      <Link to="/add-property" className="text-sm font-medium hover:text-blue-600 transition-colors">Add Listing</Link>
+                    </>
+                  ) : (
+                    <>
+                      <Link to="/search" className="text-sm font-medium hover:text-blue-600 transition-colors">Find Housing</Link>
+                      {profile?.role === 'student' && (
+                        <Link to="/profile?tab=saved" className="text-sm font-medium hover:text-blue-600 transition-colors">Saved Housing</Link>
+                      )}
+                      <Link to="/how-it-works" className="text-sm font-medium hover:text-blue-600 transition-colors">How it Works</Link>
+                    </>
                   )}
+                  
                   {profile?.role === 'admin' && (
                     <Link to="/admin" className="text-sm font-medium hover:text-blue-600 transition-colors">Admin</Link>
                   )}
+
+                  <Link to="/about" className="text-sm font-medium hover:text-blue-600 transition-colors">About Us</Link>
+                  <Link to="/contact" className="text-sm font-medium hover:text-blue-600 transition-colors">Contact Us</Link>
                   
                   <button 
                     onClick={toggleTheme}
@@ -230,21 +252,40 @@ export default function App() {
                   )}
                 >
                   <div className="px-4 pt-2 pb-6 space-y-2">
-                    <Link 
-                      to="/search" 
-                      onClick={() => setIsMenuOpen(false)}
-                      className="block px-3 py-2 rounded-md text-base font-medium hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-blue-600"
-                    >
-                      Find Housing
-                    </Link>
-                    {profile?.role === 'landlord' && (
-                      <Link 
-                        to="/landlord-dashboard" 
-                        onClick={() => setIsMenuOpen(false)}
-                        className="block px-3 py-2 rounded-md text-base font-medium hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-blue-600"
-                      >
-                        Dashboard
-                      </Link>
+                    {profile?.role === 'landlord' ? (
+                      <>
+                        <Link 
+                          to="/landlord-dashboard" 
+                          onClick={() => setIsMenuOpen(false)}
+                          className="block px-3 py-2 rounded-md text-base font-medium hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-blue-600"
+                        >
+                          Dashboard
+                        </Link>
+                        <Link 
+                          to="/add-property" 
+                          onClick={() => setIsMenuOpen(false)}
+                          className="block px-3 py-2 rounded-md text-base font-medium hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-blue-600"
+                        >
+                          Add Listing
+                        </Link>
+                      </>
+                    ) : (
+                      <>
+                        <Link 
+                          to="/search" 
+                          onClick={() => setIsMenuOpen(false)}
+                          className="block px-3 py-2 rounded-md text-base font-medium hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-blue-600"
+                        >
+                          Find Housing
+                        </Link>
+                        <Link 
+                          to="/how-it-works" 
+                          onClick={() => setIsMenuOpen(false)}
+                          className="block px-3 py-2 rounded-md text-base font-medium hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-blue-600"
+                        >
+                          How it Works
+                        </Link>
+                      </>
                     )}
                     {profile?.role === 'admin' && (
                       <Link 
@@ -255,6 +296,20 @@ export default function App() {
                         Admin Dashboard
                       </Link>
                     )}
+                    <Link 
+                      to="/about" 
+                      onClick={() => setIsMenuOpen(false)}
+                      className="block px-3 py-2 rounded-md text-base font-medium hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-blue-600"
+                    >
+                      About Us
+                    </Link>
+                    <Link 
+                      to="/contact" 
+                      onClick={() => setIsMenuOpen(false)}
+                      className="block px-3 py-2 rounded-md text-base font-medium hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-blue-600"
+                    >
+                      Contact Us
+                    </Link>
                     <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
                       {!user ? (
                         <Link 
@@ -291,15 +346,20 @@ export default function App() {
           {/* Main Content */}
           <main className="min-h-[calc(100vh-4rem)]">
             <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/search" element={<SearchPage />} />
-              <Route path="/property/:id" element={<PropertyDetailsPage />} />
+              <Route path="/" element={<HomePage profile={profile} />} />
+              <Route path="/search" element={<SearchPage profile={profile} />} />
+              <Route path="/property/:id" element={<PropertyDetailsPage profile={profile} />} />
               <Route path="/list-property" element={<LandlordOnboarding profile={profile} />} />
               <Route path="/add-property" element={<AddPropertyPage profile={profile} />} />
               <Route path="/landlord-dashboard" element={<LandlordDashboard profile={profile} />} />
               <Route path="/admin" element={<AdminDashboardPage profile={profile} />} />
               <Route path="/profile" element={<ProfilePage profile={profile} user={user} />} />
               <Route path="/auth" element={<AuthPage />} />
+              <Route path="/how-it-works" element={<HowItWorks />} />
+              <Route path="/safety" element={<SafetyTips />} />
+              <Route path="/pricing" element={<Pricing />} />
+              <Route path="/landlord-guide" element={<LandlordGuide />} />
+              <Route path="/messages" element={<ChatPage profile={profile} />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/faq" element={<FAQPage />} />
               <Route path="/contact" element={<ContactPage />} />
@@ -331,8 +391,9 @@ export default function App() {
                   <ul className="space-y-4">
                     <li><Link to="/search" className="hover:text-blue-400 transition-colors">Find Housing</Link></li>
                     <li><Link to="/list-property" className="hover:text-blue-400 transition-colors">List Property</Link></li>
-                    <li><Link to="/about" className="hover:text-blue-400 transition-colors">About Us</Link></li>
-                    <li><Link to="/faq" className="hover:text-blue-400 transition-colors">FAQs</Link></li>
+                    <li><Link to="/how-it-works" className="hover:text-blue-400 transition-colors">How it Works</Link></li>
+                    <li><Link to="/safety" className="hover:text-blue-400 transition-colors">Safety Tips</Link></li>
+                    <li><Link to="/pricing" className="hover:text-blue-400 transition-colors">Pricing</Link></li>
                   </ul>
                 </div>
                 <div>

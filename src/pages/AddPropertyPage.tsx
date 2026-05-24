@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { 
   collection, 
   addDoc, 
@@ -18,7 +18,8 @@ import {
   ArrowLeft,
   Plus,
   X,
-  MessageCircle
+  MessageCircle,
+  ShieldCheck
 } from 'lucide-react';
 import { motion } from 'motion/react';
 
@@ -99,7 +100,28 @@ const AddPropertyPage = ({ profile }: Props) => {
   };
 
   if (!profile || profile.role !== 'landlord') {
-    return <div className="p-24 text-center font-bold text-red-500">Access Denied. Only verified landlords can list properties.</div>;
+    return <div className="p-24 text-center font-bold text-red-500">Access Denied. Only registered landlords can access this page.</div>;
+  }
+
+  if (profile.verificationStatus !== 'approved') {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-24 text-center">
+        <div className="w-20 h-20 bg-amber-50 rounded-3xl flex items-center justify-center mx-auto mb-6 text-amber-500">
+          <ShieldCheck className="w-10 h-10" />
+        </div>
+        <h2 className="text-3xl font-black text-slate-900 mb-4">Verification Pending</h2>
+        <p className="text-slate-500 max-w-md mx-auto mb-10 text-lg">
+          Your landlord verification is currently {profile.verificationStatus === 'pending' ? 'under review' : 'incomplete'}. 
+          You'll be able to list properties as soon as your account is approved.
+        </p>
+        <Link 
+          to="/profile" 
+          className="inline-flex items-center gap-2 px-8 py-4 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-xl shadow-blue-100"
+        >
+          View Profile Status
+        </Link>
+      </div>
+    );
   }
 
   return (

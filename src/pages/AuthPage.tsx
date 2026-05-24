@@ -78,11 +78,16 @@ const AuthPage = () => {
 
   const handleGoogleLogin = async () => {
     try {
+      setError('');
       await signInWithPopup(auth, googleProvider);
       navigate('/');
     } catch (err: any) {
       console.error('Google login error:', err);
-      setError(err.message);
+      if (err.code === 'auth/popup-closed-by-user') {
+        // User closed the popup, don't show as a scary error
+        return;
+      }
+      setError(err.message || 'Failed to login with Google. Please ensure popups are allowed.');
     }
   };
 

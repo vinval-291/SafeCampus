@@ -8,11 +8,97 @@ import {
   ArrowRight,
   Home,
   Users,
-  Building2
+  Building2,
+  TrendingUp,
+  BarChart3,
+  MessageCircle
 } from 'lucide-react';
 import { motion } from 'motion/react';
+import { UserProfile } from '../types';
 
-const HomePage = () => {
+interface HomePageProps {
+  profile: UserProfile | null;
+}
+
+const HomePage = ({ profile }: HomePageProps) => {
+  const isLandlord = profile?.role === 'landlord';
+
+  if (isLandlord) {
+    return (
+      <div className="flex flex-col">
+        {/* Landlord Specific Hero */}
+        <section className="py-20 lg:py-32 bg-slate-50 dark:bg-slate-900/50">
+          <div className="max-w-7xl mx-auto px-4 text-center">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 font-bold text-sm mb-8">
+                LANDLORD HUB
+              </div>
+              <h1 className="text-5xl lg:text-7xl font-black text-slate-900 dark:text-white mb-6 tracking-tight">
+                Welcome back, <span className="text-blue-600">{profile?.displayName?.split(' ')[0]}</span>
+              </h1>
+              <p className="text-xl text-slate-600 dark:text-slate-400 max-w-2xl mx-auto mb-12">
+                Manage your properties, track views, and connect with students across all your listings.
+              </p>
+              <div className="flex flex-wrap justify-center gap-6">
+                <Link 
+                  to="/landlord-dashboard" 
+                  className="px-10 py-5 bg-blue-600 text-white rounded-2xl font-bold text-lg hover:bg-blue-700 transition-all shadow-xl shadow-blue-200 dark:shadow-none flex items-center gap-2"
+                >
+                  <BarChart3 className="w-6 h-6" /> Go to Dashboard
+                </Link>
+                <Link 
+                  to="/add-property" 
+                  className="px-10 py-5 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border-2 border-slate-200 dark:border-slate-700 rounded-2xl font-bold text-lg hover:border-blue-600 dark:hover:border-blue-600 transition-all flex items-center gap-2"
+                >
+                  <Building2 className="w-6 h-6" /> Add Property
+                </Link>
+              </div>
+            </motion.div>
+          </div>
+        </section>
+
+        {/* Quick Stats for Landlords */}
+        <section className="py-24 bg-white dark:bg-slate-950">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {[
+                { icon: <TrendingUp className="text-green-500" />, title: "Growth", value: "+12%", desc: "Increase in views this month" },
+                { icon: <MessageCircle className="text-blue-500" />, title: "Leads", value: "24", desc: "Active inquiries waiting" },
+                { icon: <ShieldCheck className="text-purple-500" />, title: "Trust", value: "Verified", desc: "Your profile is fully verified" }
+              ].map((stat, i) => (
+                <div key={i} className="p-8 rounded-[2.5rem] bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
+                  <div className="w-12 h-12 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-6 shadow-sm">
+                    {stat.icon}
+                  </div>
+                  <h3 className="text-slate-500 dark:text-slate-400 font-bold text-sm uppercase tracking-widest mb-1">{stat.title}</h3>
+                  <div className="text-3xl font-black text-slate-900 dark:text-white mb-2">{stat.value}</div>
+                  <p className="text-slate-400 dark:text-slate-500 text-sm">{stat.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Landlord Education CTA */}
+        <section className="py-24 bg-blue-600">
+          <div className="max-w-7xl mx-auto px-4 text-center text-white">
+            <h2 className="text-4xl font-black mb-6">Want to boost your listings?</h2>
+            <p className="text-blue-100 text-xl mb-10 max-w-2xl mx-auto">
+              Check out our guide on how to take professional photos and write descriptions that convert 3x better.
+            </p>
+            <Link to="/landlord-guide" className="px-10 py-5 bg-white text-blue-600 rounded-2xl font-bold text-lg hover:bg-blue-50 transition-all shadow-xl inline-block">
+              View Landlord Guide
+            </Link>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
+  // General/Student View (Same as before but with profile support)
   return (
     <div className="flex flex-col">
       {/* Hero Section */}

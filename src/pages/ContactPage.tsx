@@ -25,8 +25,8 @@ const ContactPage = () => {
           <div className="space-y-8">
             {[
               { icon: Mail, title: 'Email Us', text: 'support@safecampus.com', sub: 'We reply within 24 hours' },
-              { icon: Phone, title: 'Call Us', text: '+1 (555) 000-0000', sub: 'Mon-Fri from 8am to 5pm' },
-              { icon: MapPin, title: 'Visit Us', text: '123 University St, Manchester', sub: 'Come say hello!' }
+              { icon: Phone, title: 'Call Us', text: '(+234) 816 091 1474', sub: 'Mon-Sun Support 24/7' },
+              { icon: MapPin, title: 'Visit Us', text: '123 University St, Manchester', sub: 'Our Operations Hub' }
             ].map((item, i) => (
               <div key={i} className="flex gap-6 items-start">
                 <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center shrink-0">

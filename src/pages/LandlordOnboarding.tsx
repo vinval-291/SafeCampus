@@ -43,12 +43,16 @@ const LandlordOnboarding = ({ profile }: Props) => {
   const [formData, setFormData] = useState({
     phoneNumber: '',
     idType: 'passport',
+    idNumber: '',
+    businessName: '',
+    taxId: '',
     propertyAddress: '',
     propertyType: 'apartment',
     rent: '',
     rooms: '1',
     campus: 'City Center',
-    ownershipProofType: 'title_deed'
+    ownershipProofType: 'title_deed',
+    registrationNumber: '',
   });
 
   const handleNext = () => setStep(s => s + 1);
@@ -70,10 +74,11 @@ const LandlordOnboarding = ({ profile }: Props) => {
       await updateDoc(doc(db, 'users', profile.uid), {
         role: 'landlord',
         verificationStatus: 'pending',
-        phoneNumber: formData.phoneNumber
+        phoneNumber: formData.phoneNumber,
+        businessName: formData.businessName
       });
 
-      setStep(6); // Success step
+      setStep(7); // Success step (updated because we added a step)
     } catch (error) {
       console.error('Onboarding error:', error);
     } finally {
@@ -95,7 +100,7 @@ const LandlordOnboarding = ({ profile }: Props) => {
       {/* Progress Bar */}
       <div className="mb-12">
         <div className="flex justify-between mb-4">
-          {[1, 2, 3, 4, 5].map((i) => (
+          {[1, 2, 3, 4, 5, 6].map((i) => (
             <div 
               key={i} 
               className={cn(
@@ -111,7 +116,7 @@ const LandlordOnboarding = ({ profile }: Props) => {
           <motion.div 
             className="h-full bg-blue-600"
             initial={{ width: 0 }}
-            animate={{ width: `${(step - 1) * 25}%` }}
+            animate={{ width: `${(step - 1) * 20}%` }}
           />
         </div>
       </div>
@@ -128,8 +133,8 @@ const LandlordOnboarding = ({ profile }: Props) => {
             <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mb-8">
               <User className="w-8 h-8 text-blue-600" />
             </div>
-            <h2 className="text-3xl font-bold text-slate-900 mb-4">Basic Information</h2>
-            <p className="text-slate-500 mb-10">Let's start with your contact details so we can reach you.</p>
+            <h2 className="text-3xl font-bold text-slate-900 mb-4">Professional Profile</h2>
+            <p className="text-slate-500 mb-10">Set up your landlord identity on the platform.</p>
             
             <div className="space-y-6">
               <div>
@@ -140,6 +145,16 @@ const LandlordOnboarding = ({ profile }: Props) => {
                   className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                   value={formData.phoneNumber}
                   onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Business Name (Optional)</label>
+                <input 
+                  type="text" 
+                  placeholder="e.g. Manchester Student Homes"
+                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                  value={formData.businessName}
+                  onChange={(e) => setFormData({...formData, businessName: e.target.value})}
                 />
               </div>
             </div>
@@ -170,23 +185,41 @@ const LandlordOnboarding = ({ profile }: Props) => {
             <h2 className="text-3xl font-bold text-slate-900 mb-4">Identity Verification</h2>
             <p className="text-slate-500 mb-10">We verify all landlords to ensure a safe community for students.</p>
             
-            <div className="space-y-8">
-              <div className="p-6 border-2 border-dashed border-slate-200 rounded-3xl text-center hover:border-blue-400 transition-colors cursor-pointer group">
-                <Upload className="w-10 h-10 text-slate-300 mx-auto mb-4 group-hover:text-blue-500 transition-colors" />
-                <h4 className="font-bold text-slate-900 mb-1">Upload Government ID</h4>
-                <p className="text-slate-400 text-sm">Passport, Driver's License or National ID</p>
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">ID Number</label>
+                <input 
+                  type="text" 
+                  placeholder="ID / Passport Number"
+                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                  value={formData.idNumber}
+                  onChange={(e) => setFormData({...formData, idNumber: e.target.value})}
+                />
               </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="p-6 border-2 border-dashed border-slate-200 rounded-3xl text-center hover:border-blue-400 transition-colors cursor-pointer group">
+                  <Upload className="w-10 h-10 text-slate-300 mx-auto mb-4 group-hover:text-blue-500 transition-colors" />
+                  <h4 className="font-bold text-slate-900 mb-1">Upload ID</h4>
+                  <p className="text-slate-400 text-xs text-center border-none shadow-none">Passport or License</p>
+                </div>
 
-              <div className="p-6 border-2 border-dashed border-slate-200 rounded-3xl text-center hover:border-blue-400 transition-colors cursor-pointer group">
-                <Camera className="w-10 h-10 text-slate-300 mx-auto mb-4 group-hover:text-blue-500 transition-colors" />
-                <h4 className="font-bold text-slate-900 mb-1">Take a Selfie</h4>
-                <p className="text-slate-400 text-sm">To verify your identity matches your ID</p>
+                <div className="p-6 border-2 border-dashed border-slate-200 rounded-3xl text-center hover:border-blue-400 transition-colors cursor-pointer group">
+                  <Camera className="w-10 h-10 text-slate-300 mx-auto mb-4 group-hover:text-blue-500 transition-colors" />
+                  <h4 className="font-bold text-slate-900 mb-1">Take Selfie</h4>
+                  <p className="text-slate-400 text-xs text-center border-none shadow-none">Live verification</p>
+                </div>
               </div>
             </div>
 
             <div className="mt-12 flex gap-4">
               <button onClick={handleBack} className="flex-1 py-4 border-2 border-slate-200 text-slate-600 rounded-2xl font-bold hover:bg-slate-50 transition-all">Back</button>
-              <button onClick={handleNext} className="flex-[2] py-4 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition-all">Continue</button>
+              <button 
+                onClick={handleNext} 
+                disabled={!formData.idNumber}
+                className="flex-[2] py-4 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition-all disabled:opacity-50"
+              >
+                Continue
+              </button>
             </div>
           </motion.div>
         )}
@@ -203,19 +236,34 @@ const LandlordOnboarding = ({ profile }: Props) => {
               <FileText className="w-8 h-8 text-blue-600" />
             </div>
             <h2 className="text-3xl font-bold text-slate-900 mb-4">Ownership Proof</h2>
-            <p className="text-slate-500 mb-10">Upload documents proving you own the property you intend to list.</p>
+            <p className="text-slate-500 mb-10">Provide evidence that you hold the rights to rent out properties.</p>
             
-            <div className="space-y-8">
-              <div className="p-6 border-2 border-dashed border-slate-200 rounded-3xl text-center hover:border-blue-400 transition-colors cursor-pointer group">
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Registration # / Title Deed Ref</label>
+                <input 
+                  type="text" 
+                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none"
+                  placeholder="Enter official registry number"
+                  value={formData.registrationNumber}
+                  onChange={(e) => setFormData({...formData, registrationNumber: e.target.value})}
+                />
+              </div>
+              <div className="p-8 border-2 border-dashed border-slate-200 rounded-3xl text-center hover:border-blue-400 transition-colors cursor-pointer group">
                 <Upload className="w-10 h-10 text-slate-300 mx-auto mb-4 group-hover:text-blue-500 transition-colors" />
                 <h4 className="font-bold text-slate-900 mb-1">Upload Ownership Document</h4>
-                <p className="text-slate-400 text-sm">Title Deed, Utility Bill, or Tax Receipt</p>
+                <p className="text-slate-400 text-sm border-none shadow-none">Title Deed, Utility Bill, or Tax Receipt</p>
               </div>
             </div>
 
             <div className="mt-12 flex gap-4">
               <button onClick={handleBack} className="flex-1 py-4 border-2 border-slate-200 text-slate-600 rounded-2xl font-bold hover:bg-slate-50 transition-all">Back</button>
-              <button onClick={handleNext} className="flex-[2] py-4 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition-all">Continue</button>
+              <button 
+                onClick={handleNext} 
+                className="flex-[2] py-4 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition-all"
+              >
+                Continue
+              </button>
             </div>
           </motion.div>
         )}
@@ -272,7 +320,12 @@ const LandlordOnboarding = ({ profile }: Props) => {
 
             <div className="mt-12 flex gap-4">
               <button onClick={handleBack} className="flex-1 py-4 border-2 border-slate-200 text-slate-600 rounded-2xl font-bold hover:bg-slate-50 transition-all">Back</button>
-              <button onClick={handleNext} className="flex-[2] py-4 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition-all">Continue</button>
+              <button 
+                onClick={handleNext} 
+                className="flex-[2] py-4 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition-all"
+              >
+                Continue
+              </button>
             </div>
           </motion.div>
         )}
@@ -286,17 +339,60 @@ const LandlordOnboarding = ({ profile }: Props) => {
             className="bg-white p-10 rounded-[2.5rem] shadow-xl border border-slate-100"
           >
             <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mb-8">
+              <ShieldCheck className="w-8 h-8 text-blue-600" />
+            </div>
+            <h2 className="text-3xl font-bold text-slate-900 mb-4">Terms & Compliance</h2>
+            <p className="text-slate-500 mb-10">Agree to our safety standards and landlord responsibilities.</p>
+            
+            <div className="space-y-4">
+              {[
+                "I verify that all information provided is accurate and truthful.",
+                "I agree to maintain a safe and habitable living environment.",
+                "I understand that background checks will be performed.",
+                "I agree to the 24-hour response time policy for student inquiries."
+              ].map((term, i) => (
+                <label key={i} className="flex items-start gap-3 p-4 bg-slate-50 rounded-2xl cursor-pointer hover:bg-slate-100 transition-colors">
+                  <input type="checkbox" className="mt-1 w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500" required />
+                  <span className="text-slate-600 text-sm font-medium">{term}</span>
+                </label>
+              ))}
+            </div>
+
+            <div className="mt-12 flex gap-4">
+              <button onClick={handleBack} className="flex-1 py-4 border-2 border-slate-200 text-slate-600 rounded-2xl font-bold hover:bg-slate-50 transition-all">Back</button>
+              <button onClick={handleNext} className="flex-[2] py-4 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition-all">Review Application</button>
+            </div>
+          </motion.div>
+        )}
+
+        {step === 6 && (
+          <motion.div 
+            key="step6"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="bg-white p-10 rounded-[2.5rem] shadow-xl border border-slate-100"
+          >
+            <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mb-8">
               <CheckCircle2 className="w-8 h-8 text-blue-600" />
             </div>
             <h2 className="text-3xl font-bold text-slate-900 mb-4">Review & Submit</h2>
             <p className="text-slate-500 mb-10">Please review your information before submitting for verification.</p>
             
             <div className="bg-slate-50 p-8 rounded-3xl space-y-4">
-              <div className="flex justify-between">
+              <div className="flex justify-between border-b border-slate-200 pb-2">
                 <span className="text-slate-400 font-medium">Phone</span>
                 <span className="text-slate-900 font-bold">{formData.phoneNumber}</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between border-b border-slate-200 pb-2">
+                <span className="text-slate-400 font-medium">ID Number</span>
+                <span className="text-slate-900 font-bold">{formData.idNumber}</span>
+              </div>
+              <div className="flex justify-between border-b border-slate-200 pb-2">
+                <span className="text-slate-400 font-medium">Business</span>
+                <span className="text-slate-900 font-bold">{formData.businessName || 'N/A'}</span>
+              </div>
+              <div className="flex justify-between border-b border-slate-200 pb-2">
                 <span className="text-slate-400 font-medium">Address</span>
                 <span className="text-slate-900 font-bold">{formData.propertyAddress}</span>
               </div>
@@ -319,7 +415,7 @@ const LandlordOnboarding = ({ profile }: Props) => {
           </motion.div>
         )}
 
-        {step === 6 && (
+        {step === 7 && (
           <motion.div 
             key="step6"
             initial={{ opacity: 0, scale: 0.9 }}

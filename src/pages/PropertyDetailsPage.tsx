@@ -9,9 +9,8 @@ import {
   updateDoc,
   increment
 } from 'firebase/firestore';
-import { db, auth, googleProvider } from '../firebase';
-import { signInWithPopup } from 'firebase/auth';
-import { Property, UserProfile } from '../types';
+import { db, auth } from '../firebase';
+import { Property, UserProfile, Review, Booking } from '../types';
 import { 
   MapPin, 
   Home, 
@@ -25,26 +24,33 @@ import {
   MessageCircle,
   Lock,
   Phone,
-  AlertCircle
+  AlertCircle,
+  Star,
+  Send
 } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
+import { query, where, onSnapshot, runTransaction, getDocs } from 'firebase/firestore';
 
-const PropertyDetailsPage = () => {
+interface Props {
+  profile: UserProfile | null;
+}
+
+const PropertyDetailsPage = ({ profile }: Props) => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [property, setProperty] = useState<Property | null>(null);
   const [landlord, setLandlord] = useState<UserProfile | null>(null);
+  const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingSuccess, setBookingSuccess] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      setIsLoggedIn(!!user);
-    });
-    return () => unsubscribe();
-  }, []);
+  const [userHasAcceptedBooking, setUserHasAcceptedBooking] = useState(false);
+  
+  // Review form state
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
 
   useEffect(() => {
     const fetchProperty = async () => {
@@ -55,24 +61,75 @@ const PropertyDetailsPage = () => {
         const data = { id: docSnap.id, ...docSnap.data() } as Property;
         setProperty(data);
         
-        // Increment views
-        await updateDoc(docRef, {
-          views: increment(1)
+        await updateDoc(docRef, { views: increment(1) });
+
+        const landlordSnap = await getDoc(doc(db, 'users', data.landlordId));
+        if (landlordSnap.exists()) setLandlord(landlordSnap.data() as UserProfile);
+
+        // Fetch Reviews
+        const reviewsQuery = query(collection(db, 'reviews'), where('propertyId', '==', id));
+        onSnapshot(reviewsQuery, (snap) => {
+          setReviews(snap.docs.map(d => ({ id: d.id, ...d.data() } as Review)));
         });
 
-        // Fetch landlord details if logged in
-        if (auth.currentUser) {
-          const landlordRef = doc(db, 'users', data.landlordId);
-          const landlordSnap = await getDoc(landlordRef);
-          if (landlordSnap.exists()) {
-            setLandlord(landlordSnap.data() as UserProfile);
-          }
+        // Check if current user has an accepted booking to allow review
+        if (profile?.role === 'student') {
+          const bookingCheckQuery = query(
+            collection(db, 'bookings'), 
+            where('studentId', '==', profile.uid),
+            where('propertyId', '==', id),
+            where('status', '==', 'accepted')
+          );
+          onSnapshot(bookingCheckQuery, (snap) => {
+            setUserHasAcceptedBooking(!snap.empty);
+          });
         }
       }
       setLoading(false);
     };
     fetchProperty();
-  }, [id, isLoggedIn]);
+  }, [id, profile]);
+
+  const handleSubmitReview = async () => {
+    if (!profile || !property || !id) return;
+    setSubmittingReview(true);
+    try {
+      await runTransaction(db, async (transaction) => {
+        const propertyRef = doc(db, 'properties', id);
+        const propSnap = await transaction.get(propertyRef);
+        if (!propSnap.exists()) throw "Property does not exist!";
+
+        const data = propSnap.data();
+        const currentRating = data.rating || 0;
+        const currentCount = data.reviewCount || 0;
+        const newCount = currentCount + 1;
+        const newRating = ((currentRating * currentCount) + reviewRating) / newCount;
+
+        const reviewRef = doc(collection(db, 'reviews'));
+        transaction.set(reviewRef, {
+          propertyId: id,
+          landlordId: property.landlordId,
+          studentId: profile.uid,
+          studentName: profile.displayName || profile.email,
+          studentPhoto: profile.photoURL,
+          rating: reviewRating,
+          comment: reviewComment,
+          createdAt: serverTimestamp()
+        });
+
+        transaction.update(propertyRef, {
+          rating: newRating,
+          reviewCount: newCount
+        });
+      });
+      setShowReviewForm(false);
+      setReviewComment('');
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
 
   const handleLogin = () => {
     navigate('/auth');
@@ -88,6 +145,42 @@ const PropertyDetailsPage = () => {
       window.open(`https://wa.me/${property.whatsappNumber || landlord?.phoneNumber || ''}?text=${message}`, '_blank');
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const handleStartChat = async () => {
+    if (!profile) {
+      handleLogin();
+      return;
+    }
+    if (!property || !id) return;
+
+    try {
+      // Check if chat already exists
+      const chatQuery = query(
+        collection(db, 'chats'),
+        where('participants', 'array-contains', profile.uid),
+        where('propertyId', '==', id)
+      );
+      
+      const snap = await getDocs(chatQuery);
+      if (!snap.empty) {
+        navigate(`/messages?id=${snap.docs[0].id}`);
+        return;
+      }
+
+      // Create new chat
+      const newChat = await addDoc(collection(db, 'chats'), {
+        participants: [profile.uid, property.landlordId],
+        propertyId: id,
+        updatedAt: serverTimestamp(),
+        createdAt: serverTimestamp(),
+        lastMessage: ''
+      });
+
+      navigate(`/messages?id=${newChat.id}`);
+    } catch (error) {
+      console.error('Error starting chat:', error);
     }
   };
 
@@ -152,9 +245,17 @@ const PropertyDetailsPage = () => {
             <div className="flex justify-between items-start mb-8">
               <div>
                 <h1 className="text-4xl font-black text-slate-900 mb-4 tracking-tight">{property.title}</h1>
-                <p className="text-slate-500 flex items-center gap-2 text-lg">
-                  <MapPin className="w-5 h-5 text-blue-600" /> {property.address} • {property.campus}
-                </p>
+                <div className="flex items-center gap-4 mb-4">
+                  <p className="text-slate-500 flex items-center gap-2 text-lg">
+                    <MapPin className="w-5 h-5 text-blue-600" /> {property.address} • {property.campus}
+                  </p>
+                  <div className="h-4 w-[1px] bg-slate-200"></div>
+                  <div className="flex items-center gap-1">
+                    <Star className="w-5 h-5 text-amber-400 fill-current" />
+                    <span className="font-bold text-slate-900">{property.rating ? property.rating.toFixed(1) : 'New'}</span>
+                    <span className="text-slate-400 font-medium">({property.reviewCount || 0} reviews)</span>
+                  </div>
+                </div>
               </div>
               <div className="flex gap-3">
                 <button className="p-4 bg-slate-50 text-slate-400 rounded-2xl hover:text-blue-600 hover:bg-blue-50 transition-all">
@@ -209,6 +310,80 @@ const PropertyDetailsPage = () => {
                   ))}
                 </div>
               </div>
+
+              {/* Reviews Section */}
+              <div className="pt-12 border-t border-slate-100">
+                <div className="flex justify-between items-center mb-8">
+                  <h3 className="text-2xl font-black text-slate-900">Student Reviews</h3>
+                  {userHasAcceptedBooking && (
+                    <button 
+                      onClick={() => setShowReviewForm(!showReviewForm)}
+                      className="text-blue-600 font-bold hover:underline"
+                    >
+                      {showReviewForm ? "Cancel" : "Write a Review"}
+                    </button>
+                  )}
+                </div>
+
+                <AnimatePresence>
+                  {showReviewForm && (
+                    <motion.div 
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="bg-slate-50 border border-slate-100 rounded-3xl p-8 mb-12 overflow-hidden"
+                    >
+                      <h4 className="font-bold mb-6">How was your stay?</h4>
+                      <div className="flex gap-2 mb-6 text-amber-400">
+                        {[1, 2, 3, 4, 5].map(star => (
+                          <button key={star} onClick={() => setReviewRating(star)}>
+                            <Star className={cn("w-8 h-8", star <= reviewRating ? "fill-current" : "")} />
+                          </button>
+                        ))}
+                      </div>
+                      <textarea 
+                        className="w-full p-6 bg-white border border-slate-100 rounded-2xl mb-6 outline-none focus:ring-2 focus:ring-blue-500 min-h-[150px]"
+                        placeholder="Tell other students about your experience..."
+                        value={reviewComment}
+                        onChange={(e) => setReviewComment(e.target.value)}
+                      />
+                      <button 
+                        onClick={handleSubmitReview}
+                        disabled={submittingReview || !reviewComment}
+                        className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all flex items-center gap-2 disabled:opacity-50"
+                      >
+                        {submittingReview ? "Posting..." : "Post Review"} <Send className="w-4 h-4" />
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                <div className="space-y-8">
+                  {reviews.length > 0 ? reviews.map(review => (
+                    <div key={review.id} className="flex gap-6">
+                      <img 
+                        src={review.studentPhoto || `https://ui-avatars.com/api/?name=${review.studentName}`} 
+                        className="w-12 h-12 rounded-full border border-slate-100" 
+                        alt={review.studentName}
+                      />
+                      <div className="flex-1">
+                        <div className="flex justify-between items-start mb-2">
+                          <h4 className="font-bold text-slate-900">{review.studentName}</h4>
+                          <div className="flex items-center text-amber-400 gap-1">
+                            <Star className="w-4 h-4 fill-current" />
+                            <span className="text-sm font-black text-slate-900">{review.rating}</span>
+                          </div>
+                        </div>
+                        <p className="text-slate-600 leading-relaxed">{review.comment}</p>
+                      </div>
+                    </div>
+                  )) : (
+                    <div className="text-center py-12 bg-slate-50 rounded-3xl border border-dashed border-slate-200">
+                      <p className="text-slate-400 font-medium">No reviews yet. Be the first to share your experience!</p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -237,66 +412,77 @@ const PropertyDetailsPage = () => {
                 </div>
               </div>
 
-              {isLoggedIn ? (
-                <div className="space-y-4">
-                  {bookingSuccess ? (
-                    <div className="bg-green-50 p-6 rounded-2xl text-center border border-green-100">
-                      <CheckCircle2 className="w-10 h-10 text-green-500 mx-auto mb-3" />
-                      <h4 className="font-bold text-green-900 mb-1">Request Sent!</h4>
-                      <p className="text-green-700 text-sm">The landlord will review your request and contact you soon.</p>
-                    </div>
-                  ) : (
-                    <>
-                      <button 
-                        onClick={handleBooking}
-                        disabled={bookingLoading}
-                        className="w-full py-5 bg-blue-600 text-white rounded-2xl font-bold text-lg hover:bg-blue-700 transition-all shadow-xl shadow-blue-100 flex items-center justify-center gap-2 active:scale-[0.98]"
-                      >
-                        {bookingLoading ? "Processing..." : "Request to Book"}
-                      </button>
-                      <button 
-                        onClick={handleWhatsappClick}
-                        className="w-full py-5 bg-green-600 text-white rounded-2xl font-bold text-lg hover:bg-green-700 transition-all shadow-xl shadow-green-100 flex items-center justify-center gap-2 active:scale-[0.98]"
-                      >
-                        <MessageCircle className="w-5 h-5" /> Chat on WhatsApp
-                      </button>
-                    </>
-                  )}
-                  
-                  {landlord && (
-                    <div className="mt-6 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Landlord Details</p>
-                      <div className="flex items-center gap-3">
-                        <img 
-                          src={landlord.photoURL || `https://ui-avatars.com/api/?name=${landlord.displayName}`} 
-                          alt={landlord.displayName || 'Landlord'} 
-                          className="w-10 h-10 rounded-full"
-                        />
-                        <div>
-                          <p className="text-sm font-bold text-slate-900">{landlord.displayName}</p>
-                          <p className="text-xs text-slate-500 flex items-center gap-1">
-                            <Phone className="w-3 h-3" /> {landlord.phoneNumber || 'No phone provided'}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="bg-slate-50 p-8 rounded-3xl text-center border border-slate-100">
-                  <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm">
-                    <Lock className="w-8 h-8 text-blue-600" />
-                  </div>
-                  <h4 className="font-bold text-slate-900 mb-2">Login to Book</h4>
-                  <p className="text-slate-500 text-sm mb-6">Create an account to see landlord details and book this property.</p>
-                  <button 
-                    onClick={handleLogin}
-                    className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100"
-                  >
-                    Login / Sign Up
-                  </button>
-                </div>
-              )}
+                      {(() => {
+                        const isLoggedIn = !!profile;
+                        return isLoggedIn ? (
+                          <div className="space-y-4">
+                            {bookingSuccess ? (
+                              <div className="bg-green-50 p-6 rounded-2xl text-center border border-green-100">
+                                <CheckCircle2 className="w-10 h-10 text-green-500 mx-auto mb-3" />
+                                <h4 className="font-bold text-green-900 mb-1">Request Sent!</h4>
+                                <p className="text-green-700 text-sm">The landlord will review your request and contact you soon.</p>
+                              </div>
+                            ) : (
+                              <>
+                                <button 
+                                  onClick={handleBooking}
+                                  disabled={bookingLoading}
+                                  className="w-full py-5 bg-blue-600 text-white rounded-2xl font-bold text-lg hover:bg-blue-700 transition-all shadow-xl shadow-blue-100 flex items-center justify-center gap-2 active:scale-[0.98]"
+                                >
+                                  {bookingLoading ? "Processing..." : "Request to Book"}
+                                </button>
+                                {profile?.role === 'student' && (
+                                  <button 
+                                    onClick={handleStartChat}
+                                    className="w-full py-5 bg-white text-blue-600 border-2 border-blue-600 rounded-2xl font-bold text-lg hover:bg-blue-50 transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
+                                  >
+                                    <MessageCircle className="w-5 h-5" /> Chat on SafeCampus
+                                  </button>
+                                )}
+                                <button 
+                                  onClick={handleWhatsappClick}
+                                  className="w-full py-5 bg-green-600 text-white rounded-2xl font-bold text-lg hover:bg-green-700 transition-all shadow-xl shadow-green-100 flex items-center justify-center gap-2 active:scale-[0.98]"
+                                >
+                                  <MessageCircle className="w-5 h-5" /> Chat on WhatsApp
+                                </button>
+                              </>
+                            )}
+                            
+                            {landlord && (
+                              <div className="mt-6 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Landlord Details</p>
+                                <div className="flex items-center gap-3">
+                                  <img 
+                                    src={landlord.photoURL || `https://ui-avatars.com/api/?name=${landlord.displayName}`} 
+                                    alt={landlord.displayName || 'Landlord'} 
+                                    className="w-10 h-10 rounded-full"
+                                  />
+                                  <div>
+                                    <p className="text-sm font-bold text-slate-900">{landlord.displayName}</p>
+                                    <p className="text-xs text-slate-500 flex items-center gap-1">
+                                      <Phone className="w-3 h-3" /> {landlord.phoneNumber || 'No phone provided'}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="bg-slate-50 p-8 rounded-3xl text-center border border-slate-100">
+                            <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm">
+                              <Lock className="w-8 h-8 text-blue-600" />
+                            </div>
+                            <h4 className="font-bold text-slate-900 mb-2">Login to Book</h4>
+                            <p className="text-slate-500 text-sm mb-6">Create an account to see landlord details and book this property.</p>
+                            <button 
+                              onClick={handleLogin}
+                              className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100"
+                            >
+                              Login / Sign Up
+                            </button>
+                          </div>
+                        );
+                      })()}
 
               <p className="text-center text-slate-400 text-xs mt-6 leading-relaxed">
                 You won't be charged yet. The landlord will contact you to arrange a viewing and sign the agreement.
@@ -350,3 +536,5 @@ const PropertyDetailsPage = () => {
 };
 
 export default PropertyDetailsPage;
+
+function cn(...inputs: any[]) { return inputs.filter(Boolean).join(' '); }

@@ -7,7 +7,7 @@ import {
   orderBy 
 } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Property } from '../types';
+import { Property, UserProfile } from '../types';
 import { 
   Search, 
   Filter, 
@@ -21,8 +21,13 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
+import PropertyCard from '../components/PropertyCard';
 
-const SearchPage = () => {
+interface SearchPageProps {
+  profile: UserProfile | null;
+}
+
+const SearchPage = ({ profile }: SearchPageProps) => {
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -189,53 +194,11 @@ const SearchPage = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <AnimatePresence mode="popLayout">
                 {filteredProperties.map((property) => (
-                  <motion.div 
-                    key={property.id}
-                    layout
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    className="bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all border border-slate-100 group"
-                  >
-                    <Link to={`/property/${property.id}`}>
-                      <div className="relative h-64 overflow-hidden">
-                        <img 
-                          src={property.images[0] || `https://picsum.photos/seed/${property.id}/800/600`} 
-                          alt={property.title} 
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                          referrerPolicy="no-referrer"
-                        />
-                        <div className="absolute top-4 left-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-[10px] font-black text-blue-600 uppercase tracking-widest shadow-sm">
-                          {property.type}
-                        </div>
-                        <div className="absolute top-4 right-4 bg-green-500 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm">
-                          Verified
-                        </div>
-                      </div>
-                      <div className="p-6">
-                        <div className="flex justify-between items-start mb-4">
-                          <div className="flex-1 pr-4">
-                            <h3 className="font-bold text-slate-900 text-lg mb-1 truncate">{property.title}</h3>
-                            <p className="text-slate-500 text-sm flex items-center gap-1">
-                              <MapPin className="w-4 h-4" /> {property.campus}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <span className="text-2xl font-black text-blue-600">${property.price}</span>
-                            <span className="block text-[10px] text-slate-400 font-bold uppercase">/ month</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-4 text-slate-400 text-xs border-t border-slate-50 pt-4">
-                          <span className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg">
-                            <Home className="w-3.5 h-3.5" /> {property.rooms} Rooms
-                          </span>
-                          <span className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg">
-                            <Users className="w-3.5 h-3.5" /> {property.type}
-                          </span>
-                        </div>
-                      </div>
-                    </Link>
-                  </motion.div>
+                  <PropertyCard 
+                    key={property.id} 
+                    property={property} 
+                    profile={profile} 
+                  />
                 ))}
               </AnimatePresence>
             </div>
